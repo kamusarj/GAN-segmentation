@@ -1,0 +1,47 @@
+# === Dataset & Output Folders ===
+LoveDA_patch/
+predictions/
+Test/
+Train/
+Val/
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.env
+.venv
+env/
+venv/
+
+# === Jupyter Notebook ===
+.ipynb_checkpoints/
+
+# === Model Weights (large files) ===
+*.pth
+*.pt
+*.h5
+*.ckpt
+
+# === Node / Frontend ===
+node_modules/
+dist/
+.next/
+
+# === OS ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === IDE ===
+.vscode/
+.idea/
+*.suo
+*.user
