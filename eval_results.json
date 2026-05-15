@@ -1,0 +1,53 @@
+{
+  "per_class": {
+    "Background": {
+      "IoU": 0.5384,
+      "Precision": 0.6583,
+      "Recall": 0.7473,
+      "F1": 0.7
+    },
+    "Building": {
+      "IoU": 0.6397,
+      "Precision": 0.7044,
+      "Recall": 0.8745,
+      "F1": 0.7803
+    },
+    "Road": {
+      "IoU": 0.5435,
+      "Precision": 0.6925,
+      "Recall": 0.7164,
+      "F1": 0.7042
+    },
+    "Water": {
+      "IoU": 0.6832,
+      "Precision": 0.7918,
+      "Recall": 0.8328,
+      "F1": 0.8118
+    },
+    "Barren": {
+      "IoU": 0.3145,
+      "Precision": 0.5338,
+      "Recall": 0.4336,
+      "F1": 0.4785
+    },
+    "Forest": {
+      "IoU": 0.4343,
+      "Precision": 0.572,
+      "Recall": 0.6434,
+      "F1": 0.6056
+    },
+    "Agricultural": {
+      "IoU": 0.5543,
+      "Precision": 0.8484,
+      "Recall": 0.6152,
+      "F1": 0.7132
+    }
+  },
+  "mean": {
+    "mIoU": 0.5297,
+    "mean_precision": 0.6859,
+    "mean_recall": 0.6948,
+    "mean_f1": 0.6848,
+    "pixel_accuracy": 0.707
+  }
+}

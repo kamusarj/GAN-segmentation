@@ -9,6 +9,7 @@ import logging
 import numpy as np
 from PIL import Image
 
+import cv2
 import torch
 import segmentation_models_pytorch as smp
 
@@ -41,15 +42,53 @@ _infer_transform = A.Compose([
     ToTensorV2(),
 ])
 
+
+# ── Tiền xử lý ảnh vệ tinh ───────────────────────────────────────────────────
+def _preprocess_patch(patch: np.ndarray) -> np.ndarray:
+    """
+    Tăng chất lượng patch ảnh vệ tinh trước khi đưa vào model.
+
+    Bước 1 — CLAHE (Contrast Limited Adaptive Histogram Equalization):
+      Tăng tương phản cục bộ, giúp model phân biệt cấu trúc
+      như đường, tòa nhà, sao mờ cây mà nhà sần hơn.
+
+    Bước 2 — Unsharp Mask:
+      Làm sắc nét cạnh giữa các vùng có texture khác nhau.
+
+    Args:
+        patch: numpy array [H, W, 3] uint8 RGB.
+
+    Returns:
+        numpy array [H, W, 3] uint8 RGB đã được tiền xử lý.
+    """
+    # Chuyển sang LAB — CLAHE chỉ áp trên kênh L (luminance)
+    lab = cv2.cvtColor(patch, cv2.COLOR_RGB2LAB)
+    l_ch, a_ch, b_ch = cv2.split(lab)
+
+    # CLAHE: clipLimit điều chỉnh mức tăng tương phản tối đa (tránh nhiễu)
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    l_ch = clahe.apply(l_ch)
+
+    lab = cv2.merge([l_ch, a_ch, b_ch])
+    enhanced = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
+
+    # Unsharp Mask: làm sắc nét nhẹ (strength=0.6)
+    blurred   = cv2.GaussianBlur(enhanced, (0, 0), sigmaX=1.5)
+    sharpened = cv2.addWeighted(enhanced, 1.6, blurred, -0.6, 0)
+
+    return sharpened
+
+
 # ── Biến toàn cục giữ model ──────────────────────────────────────────────────
 _generator = None
+_active_model_path: str | None = None
 
 
 def load_model(model_path: str = "/code/last_generator.pth") -> None:
     """
     Load Generator từ checkpoint vào bộ nhớ (gọi 1 lần khi startup).
     """
-    global _generator
+    global _generator, _active_model_path
 
     if not os.path.exists(model_path):
         raise FileNotFoundError(
@@ -71,7 +110,13 @@ def load_model(model_path: str = "/code/last_generator.pth") -> None:
     model.eval()
 
     _generator = model
+    _active_model_path = model_path
     logger.info("✅ Model loaded thành công!")
+
+
+def get_active_model_path() -> str | None:
+    """Trả về đường dẫn model đang được sử dụng."""
+    return _active_model_path
 
 
 def get_model():
@@ -92,6 +137,7 @@ def predict(image_bytes: bytes) -> dict:
         dict với:
           - "mask_image": bytes ảnh PNG của mask tô màu (LoveDA palette)
           - "overlay_image": bytes ảnh PNG overlay (ảnh gốc + mask, alpha=0.5)
+          - "raw_mask": bytes ảnh PNG grayscale chứa class index (0-6)
           - "class_stats": list[dict] thống kê tỉ lệ từng class (%)
     """
     model = get_model()
@@ -130,6 +176,7 @@ def predict(image_bytes: bytes) -> dict:
         for y in range(0, pH - IMG_SIZE + 1, STRIDE):
             for x in range(0, pW - IMG_SIZE + 1, STRIDE):
                 patch = padded[y : y + IMG_SIZE, x : x + IMG_SIZE]
+                patch = _preprocess_patch(patch)   # ← tiền xử lý CLAHE + sharpen
                 inp   = _infer_transform(image=patch)["image"].unsqueeze(0).to(DEVICE)
                 # Lấy logits (trước argmax) để blend
                 logits = model(inp).squeeze(0).cpu().numpy()  # [C, H, W]
@@ -157,6 +204,7 @@ def predict(image_bytes: bytes) -> dict:
 
     mask_bytes    = _to_png(colored_np)
     overlay_bytes = _to_png(overlay_np)
+    raw_mask_bytes = _to_png(pred_map) # grayscale image containing 0-6
 
     # ── 5. Tính thống kê class ───────────────────────────────────────────────
     total_px = pred_map.size
@@ -173,5 +221,6 @@ def predict(image_bytes: bytes) -> dict:
     return {
         "mask_image"   : mask_bytes,
         "overlay_image": overlay_bytes,
+        "raw_mask"     : raw_mask_bytes,
         "class_stats"  : class_stats,
     }

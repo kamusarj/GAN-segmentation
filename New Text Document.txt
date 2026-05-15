@@ -1,0 +1,91 @@
+1.4. Công nghệ và công cụ hỗ trợ phát triển
+1.4.1. PyTorch
+Trong hệ thống này, khối kiến trúc học sâu được xây dựng và huấn luyện dựa trên nền tảng PyTorch. PyTorch cung cấp đồ thị tính toán động, giúp việc thiết kế và tinh chỉnh các vòng lặp hồi quy của LSTM trở nên linh hoạt và dễ gỡ lỗi hơn so với các framework tĩnh [11].
+Tuy nhiên, thách thức lớn nhất khi đưa hệ thống AI vào ứng dụng giao thông thực tế là tốc độ phản hồi. Việc chạy đồng thời mô hình thị giác máy tính nặng nề và mô hình chuỗi thời gian đòi hỏi tài nguyên phần cứng cực lớn. Do đó, hệ thống áp dụng công cụ OpenVINO (Open Visual Inference and Neural network Optimization) để tối ưu hóa.
+Bằng kỹ thuật lượng tử hóa, cụ thể là chuyển đổi trọng số của mô hình từ định dạng dấu phẩy động 32-bit (FP32) sang số nguyên 8-bit (INT8) - OpenVINO giúp thu nhỏ kích thước mô hình, tăng tốc độ suy luận lên nhiều lần mà không làm suy giảm đáng kể độ chính xác. Điều này đảm bảo hệ thống có thể phân tích video thời gian thực mượt mà mà không gặp tình trạng nghẽn cổ chai tại máy chủ tính toán.
+1.4.2. Trí tuệ nhân tạo tạo sinh và hệ thống Agent
+Trong các hệ thống giám sát truyền thống, dữ liệu thường được trình bày dưới dạng biểu đồ hoặc bảng số liệu khô khan, đòi hỏi người quản lý phải có chuyên môn để diễn giải. Việc tích hợp trí tuệ nhân tạo tạo sinh và kiến trúc Agent giúp chuyển đổi các con số kỹ thuật thành thông tin có thể hiểu được và các hành động thực tế, tạo ra một giao diện tương tác thông minh giữa hệ thống và con người.
+1.4.2.1. Hệ sinh thái LLM và Google Generative AI
+Mô hình ngôn ngữ lớn (Large Language Model - LLM) là các mô hình học sâu được huấn luyện trên lượng dữ liệu văn bản khổng lồ, có khả năng hiểu ngữ nghĩa, suy luận và tạo văn bản tự nhiên. Trong số đó, Google Gemini nổi bật là một mô hình đa phương thức thế hệ mới.
+Trong phạm vi đề tài, Gemini không chỉ đóng vai trò là một công cụ tạo văn bản mà còn là một “trí tuệ phân tích”:
+-	Khả năng suy luận ngữ cảnh: Gemini có thể nhận đầu vào là các con số về lưu lượng xe từ YOLOv8 và kết quả dự báo từ LSTM để đưa ra các nhận định định tính (ví dụ: “Mật độ giao thông đang ở mức báo động, cao hơn 20% so với cùng kỳ tuần trước”).
+-	Cá nhân hóa thông báo: Thay vì các câu lệnh cứng nhắc, mô hình có thể soạn thảo các bản tin giao thông phù hợp với từng đối tượng (người tham gia giao thông, cảnh sát giao thông hoặc nhà quản lý đô thị) [38][39].
+1.4.2.2. Kiến trúc Agent với LangChain và LangGraph
+Để biến một LLM tĩnh thành một thực thể có khả năng hành động, hệ thống cần một khung làm việc để điều phối.
+-	LangChain: Đây là thư viện mã nguồn mở giúp “chuỗi hóa” các thành phần của AI. LangChain cung cấp các cấu trúc để kết nối Gemini với các nguồn dữ liệu ngoại vi như cơ sở dữ liệu PostgreSQL hoặc các API dự báo thời tiết, cho phép LLM truy cập vào dữ liệu thực tế (Retrieval-Augmented Generation - RAG) thay vì chỉ dựa vào kiến thức đã được huấn luyện.
+-	LangGraph: Đối với các tác vụ phức tạp đòi hỏi sự lặp lại hoặc ra quyết định có điều kiện, LangGraph là một phần mở rộng quan trọng của LangChain. Nó cho phép xây dựng các Agent dưới dạng đồ thị có trạng thái. Trong đồ thị này, mỗi bước xử lý là một nút, và Agent có thể quay lại các bước trước đó nếu dữ liệu chưa đủ tin cậy. Ví dụ, nếu Agent nhận thấy dữ liệu từ YOLOv8 bị nhiễu do trời mưa, LangGraph sẽ điều hướng Agent kiểm tra thêm dữ liệu lịch sử hoặc thông tin thời tiết trước khi đưa ra kết luận cuối cùng [12][40].
+1.4.2.3. Vai trò của AI Agent trong hệ thống giám sát giao thông
+AI Agent đóng vai trò là một điều phối viên trung tâm kết nối giữa các mô hình AI chuyên biệt và người dùng cuối.
+Quy trình hoạt động của Agent trong hệ thống bao gồm:
+-	Tiếp nhận và phân tích truy vấn: Agent nhận câu hỏi tự nhiên từ người dùng (ví dụ: “Tình hình giao thông đường Xuân Thủy 15 phút tới thế nào?”).
+-	Triệu hồi công cụ: Agent tự động quyết định gọi hàm truy vấn cơ sở dữ liệu để lấy dữ liệu mật độ hiện tại và gọi mô hình LSTM để lấy kết quả dự báo.
+-	Tổng hợp và phản hồi: Agent kết hợp các dữ liệu thô này, đưa vào mô hình Gemini để biên dịch thành một câu trả lời hoàn chỉnh, có tính tư vấn cao.
+1.4.3. Công nghệ phát triển hệ thống Backend và cơ sở dữ liệu
+Trong kiến trúc của một hệ thống tích hợp trí tuệ nhân tạo, lớp Backend không chỉ đảm nhiệm chức năng xử lý logic nghiệp vụ mà còn đóng vai trò trung tâm trong việc điều phối và xử lý dữ liệu quy mô lớn. Hệ thống này phải đồng thời tiếp nhận luồng video theo thời gian thực, tương tác với các mô hình học sâu, lưu trữ kết quả phân tích vào cơ sở dữ liệu và cung cấp dữ liệu cho người dùng thông qua giao diện phía trước. Để đáp ứng hiệu quả khối lượng công việc lớn mà không gây ra tình trạng quá tải, việc lựa chọn công nghệ nền tảng cần ưu tiên các yếu tố về hiệu năng và khả năng xử lý bất đồng bộ..
+1.4.3.1. Nền tảng Python và FastAPI
+Do toàn bộ hệ sinh thái học sâu và AI Agent đều được xây dựng trên nền tảng Python, việc sử dụng Python làm ngôn ngữ phát triển Backend là lựa chọn tối ưu nhất để đảm bảo tính đồng nhất, tránh việc phải xây dựng các cầu nối giao tiếp phức tạp giữa các ngôn ngữ khác nhau.
+Tuy nhiên, Python truyền thống thường bị đánh giá là chậm trong các tác vụ I/O mạng. Để khắc phục, hệ thống sử dụng FastAPI làm web framework chính, kết hợp với Uvicorn (chuẩn ASGI - Asynchronous Server Gateway Interface).
+-	Xử lý bất đồng bộ: Đây là điểm mạnh nhất của FastAPI. Khi một luồng yêu cầu hệ thống nhận diện giao thông, quá trình chạy mô hình YOLOv8 hoặc gọi API Gemini sẽ mất một khoảng thời gian nhất định (vài trăm mili-giây đến vài giây). Nhờ cơ chế async/await, FastAPI có thể tạm dừng luồng hiện tại để phục vụ các yêu cầu khác (như truy vấn cơ sở dữ liệu) trong lúc chờ GPU xử lý xong, giúp tận dụng tối đa tài nguyên máy chủ.
+-	Định dạng dữ liệu nghiêm ngặt: FastAPI sử dụng Pydantic để kiểm tra và xác thực tính hợp lệ của dữ liệu đầu vào/đầu ra (ví dụ: đảm bảo định dạng chuỗi thời gian truyền vào LSTM phải chính xác). Điều này giảm thiểu tối đa lỗi runtime trong quá trình vận hành [13].
+1.4.3.2. Hệ quản trị cơ sở dữ liệu PostgreSQL và kiến trúc ORM
+Hệ thống tạo ra một lượng dữ liệu log rất lớn và liên tục (mỗi giây, mỗi khung hình đều có thể ghi nhận tọa độ xe, loại phương tiện, thời gian).
+-	PostgreSQL được lựa chọn làm hệ quản trị cơ sở dữ liệu chính trong hệ thống nhờ khả năng xử lý hiệu quả dữ liệu có cấu trúc và độ tin cậy cao. Đây là một hệ quản trị cơ sở dữ liệu quan hệ mã nguồn mở mạnh mẽ, hỗ trợ tốt các truy vấn phức tạp, đặc biệt là các phép tổng hợp theo thời gian. Bên cạnh đó, PostgreSQL đảm bảo tính toàn vẹn dữ liệu theo các nguyên tắc nhất quán, góp phần duy trì độ chính xác và ổn định của hệ thống. Trong bối cảnh bài toán dự báo chuỗi thời gian, việc truy xuất nhanh dữ liệu lịch sử để phục vụ quá trình huấn luyện và suy luận của mô hình là yêu cầu quan trọng, và PostgreSQL có khả năng đáp ứng hiệu quả yêu cầu này.
+-	SQLAlchemy và AsyncPG: Để tương tác với cơ sở dữ liệu, hệ thống sử dụng SQLAlchemy làm công cụ ORM (Object-Relational Mapping), cho phép lập trình viên thao tác với cơ sở dữ liệu thông qua các đối tượng Python thay vì viết các câu lệnh SQL thuần túy. Đặc biệt, việc kết hợp với driver AsyncPG giúp toàn bộ quá trình đọc/ghi dữ liệu diễn ra hoàn toàn bất đồng bộ, đồng điệu với kiến trúc của FastAPI.
+-	Alembic: Được sử dụng để quản lý các phiên bản cấu trúc cơ sở dữ liệu, giúp hệ thống dễ dàng mở rộng, thêm bớt bảng hoặc trường dữ liệu trong tương lai mà không làm gián đoạn dữ liệu hiện tại.
+1.4.3.3. Cơ chế bảo mật và xác thực
+Hệ thống quản lý giao thông chứa các thông tin nhạy cảm và các API điều khiển quan trọng. Việc bảo mật được thực hiện qua các tiêu chuẩn công nghiệp:
+-	Xác thực không trạng thái: Hệ thống áp dụng cơ chế xác thực không trạng thái dựa trên JWT (JSON Web Token). Sau khi người dùng đăng nhập thành công, máy chủ sẽ cấp một token đã được mã hóa để đại diện cho thông tin xác thực. Trong các yêu cầu tiếp theo từ phía giao diện người dùng, token này được gửi kèm nhằm xác minh quyền truy cập vào các API tương ứng. Cách tiếp cận này giúp máy chủ không cần lưu trữ trạng thái phiên làm việc trong bộ nhớ, từ đó tăng khả năng mở rộng và tối ưu hiệu suất của hệ thống.
+-	Mã hóa mật khẩu: Mật khẩu của người dùng không bao giờ được lưu trữ dưới dạng văn bản thuần túy. Thư viện Passlib kết hợp với thuật toán Bcrypt được sử dụng để băm mật khẩu một chiều, chống lại các cuộc tấn công giải mã cơ sở dữ liệu.
+1.4.3.4. Các công cụ tích hợp và tiện ích hệ thống
+Bên cạnh các thành phần chính, Backend còn được tích hợp các thư viện vệ tinh quan trọng để hoàn thiện tính năng:
+-	Xử lý luồng video (OpenCV): Trước khi đưa vào YOLOv8, các luồng video từ camera (RTSP stream) hoặc file MP4 phải được giải mã, thay đổi kích thước và tiền xử lý. OpenCV đảm nhận nhiệm vụ đọc từng khung hình một cách tối ưu.
+-	Giám sát tài nguyên (Psutil): Khác với các web app thông thường, việc chạy mô hình Học sâu có thể làm cạn kiệt RAM và CPU/GPU. Thư viện psutil được dùng để liên tục theo dõi sức khỏe của máy chủ. Nếu tài nguyên đạt ngưỡng cảnh báo, hệ thống có thể tạm thời hạ độ phân giải video để tránh hiện tượng sập nguồn.
+1.4.4. Công nghệ phát triển giao diện
+Giao diện người dùng trong hệ thống giám sát giao thông không chỉ đơn thuần là nơi hiển thị thông tin, mà còn phải đóng vai trò là một trung tâm điều khiển trực quan, có khả năng phản hồi tức thời. Với đặc thù dữ liệu từ các mô hình AI (YOLOv8, LSTM) được cập nhật liên tục theo từng mili giây, công nghệ Frontend được lựa chọn phải đảm bảo tối ưu hóa tốc độ render, quản lý trạng thái phức tạp và hỗ trợ tốt cho việc trực quan hóa dữ liệu.
+1.4.4.1. Framework React
+React là một thư viện mã nguồn mở dựa trên ngôn ngữ lập trình JavaScript, được phát triển bởi Meta (Facebook) vào năm 2013. Với mục tiêu tối ưu hóa hiệu suất hiển thị và trải nghiệm người dùng, React đã thay đổi tư duy lập trình giao diện từ hướng thao tác trực tiếp sang hướng khai báo.
+Trong phạm vi của dự án, ReactJS được lựa chọn nhờ vào các đặc tính kỹ thuật vượt trội:
+-	Kiến trúc Component-based: Cho phép phân tách giao diện người dùng thành các thành phần độc lập, giúp tăng khả năng tái sử dụng mã nguồn và dễ dàng trong việc kiểm thử.
+-	Cơ chế Virtual DOM: Tăng tốc độ render bằng cách chỉ cập nhật các thay đổi cần thiết lên cây DOM thực, giúp ứng dụng xử lý mượt mà các luồng dữ liệu lớn và liên tục.
+-	Luồng dữ liệu một chiều: Đảm bảo tính nhất quán của dữ liệu trong quá trình vận hành, giúp kiểm soát trạng thái của hệ thống một cách hiệu quả [14].
+1.4.4.2. Công cụ build Vite và styling với Tailwind CSS
+-	Vite: Thay thế cho các công cụ build truyền thống, Vite được sử dụng nhờ tốc độ phản hồi cực nhanh trong môi trường phát triển (Hot Module Replacement - HMR). Điều này giúp rút ngắn thời gian lập trình và tối ưu hóa kích thước mã nguồn khi đóng gói triển khai.
+-	Tailwind CSS: Đây là phiên bản mới nhất của framework CSS theo hướng Utility-first. Tailwind CSS cho phép xây dựng giao diện Dashboard chuyên nghiệp, hỗ trợ tốt cho chế độ dark/light mode và đảm bảo tính tương thích cao trên mọi thiết bị. Nhờ cơ chế JIT (Just-In-Time) cải tiến, CSS được sinh ra cực kỳ tinh gọn, giúp trang web tải nhanh hơn.
+1.4.4.3. Hệ thống Component và thư viện UI chuyên sâu
+Để tạo ra trải nghiệm người dùng tối ưu và nhất quán, hệ thống tích hợp các thư viện UI hiện đại:
+-	Radix UI: Cung cấp các thành phần giao diện không định dạng nhưng có khả năng truy cập cực cao. Điều này cho phép tùy biến hoàn toàn giao diện các thanh menu, hộp thoại cảnh báo giao thông mà vẫn đảm bảo tiêu chuẩn kỹ thuật.
+-	Framer Motion: Được sử dụng để tạo ra các hiệu ứng chuyển cảnh mượt mà khi dữ liệu giao thông thay đổi hoặc khi xuất hiện các cảnh báo ùn tắc, giúp giao diện trở nên sống động và thu hút sự chú ý của người điều hành.
+-	React Resizable Panels: Cho phép người dùng tùy chỉnh kích thước các bảng điều khiển trên giao diện (ví dụ: mở rộng màn hình camera giám sát và thu nhỏ biểu đồ thống kê) một cách linh hoạt.
+1.4.4.4. Trực quan hóa dữ liệu và tương tác thời gian thực
+Đây là phần quan trọng nhất để chuyển đổi kết quả từ các mô hình AI thành thông tin trực quan:
+-	Trực quan hóa với Recharts: Dữ liệu mật độ phương tiện từ quá khứ đến dự báo tương lai được trình bày dưới dạng biểu đồ đường và biểu đồ vùng thông qua thư viện Recharts. Khả năng tương tác trên biểu đồ cho phép người dùng theo dõi chi tiết lưu lượng xe tại từng thời điểm cụ thể.
+-	Giao tiếp WebSocket: Thay vì sử dụng cơ chế HTTP Polling truyền thống gây trễ dữ liệu, hệ thống sử dụng WebSocket để duy trì kết nối hai chiều liên tục với Backend. Khi YOLOv8 phát hiện phương tiện mới hoặc có sự cố, dữ liệu sẽ được đẩy ngay lập tức lên Frontend để cập nhật số liệu và stream video mà không cần tải lại trang.
+-	Quản lý form và xác thực dữ liệu: Sử dụng React Hook Form kết hợp với Zod để đảm bảo mọi dữ liệu nhập liệu từ phía người dùng (ví dụ: thiết lập ngưỡng cảnh báo ùn tắc) luôn chính xác và an toàn trước khi gửi về máy chủ.
+1.4.5. Kiến trúc triển khai và vận hành
+Đối với các dự án phần mềm thông thường, việc triển khai có thể chỉ đơn giản là tải mã nguồn lên một máy chủ web. Tuy nhiên, đối với một hệ thống thông minh tích hợp sâu cả trí tuệ nhân tạo (YOLOv8, LSTM, LLM) lẫn xử lý dữ liệu thời gian thực (WebSockets, Video Streaming), kiến trúc hệ thống đòi hỏi một chiến lược vận hành tinh vi hơn rất nhiều. Mục tiêu là đảm bảo hệ thống có khả năng chịu tải cao, cách ly lỗi và dễ dàng nhân rộng.
+1.4.5.1. Kiến trúc Microservices Pattern và giao tiếp hệ thống
+Thay vì xây dựng hệ thống theo dạng nguyên khối - nơi toàn bộ giao diện, API và mô hình AI được nhồi nhét vào một tiến trình duy nhất - đồ án áp dụng kiến trúc vi dịch vụ.
+Nguyên nhân cốt lõi cho sự lựa chọn này là sự chênh lệch về tiêu thụ tài nguyên: Quá trình suy luận của mô hình YOLOv8 trên từng khung hình video sẽ chiếm dụng lượng lớn sức mạnh tính toán (CPU/GPU). Nếu đặt chung với máy chủ web, những thời điểm AI xử lý quá tải sẽ làm treo toàn bộ giao diện người dùng, khiến hệ thống tê liệt.
+Bằng cách phân tách kiến trúc, hệ thống được chia thành các dịch vụ độc lập:
+-	Dịch vụ Frontend: Đảm nhiệm việc hiển thị và tương tác với người dùng qua React.
+-	Dịch vụ Backend: FastAPI đóng vai trò điều hướng, xác thực người dùng và kết nối với cơ sở dữ liệu.
+-	Dịch vụ AI Worker: Một luồng tiến trình chạy ngầm chuyên biệt chỉ để xử lý video, chạy mô hình YOLOv8, tính toán ByteTrack và chạy dự báo LSTM.
+-	Dịch vụ cơ sở dữ liệu: Hệ quản trị PostgreSQL.
+Các dịch vụ này giao tiếp với nhau qua hai giao thức chính:
+-	RESTful API (HTTP/HTTPS): Sử dụng cho các thao tác đồng bộ truyền thống như đăng nhập, truy xuất dữ liệu lịch sử, cấu hình hệ thống.
+-	WebSocket: Giao thức truyền thông hai chiều toàn thời gian. Nó được sử dụng để truyền phát trực tiếp luồng video đã được vẽ các hộp nhận diện phương tiện từ AI Worker lên Frontend, đồng thời đẩy các sự kiện cảnh báo ùn tắc theo thời gian thực với độ trễ chỉ tính bằng mili-giây.
+1.4.5.2. Công nghệ Container hóa với Docker
+Một trong những bài toán nan giải nhất khi phát triển các hệ thống học sâu là “Địa ngục thư viện” (Dependency Hell). Hệ thống phụ thuộc vào hàng loạt các phiên bản phần mềm đan chéo nhau rất khắt khe: Python, PyTorch, nền tảng tính toán song song CUDA, cuDNN (của NVIDIA), các thư viện biên dịch C++ của OpenCV... Chỉ cần sai lệch một phiên bản nhỏ giữa môi trường phát triển (máy cá nhân) và môi trường triển khai (máy chủ), hệ thống sẽ gặp lỗi không thể hoạt động.
+Giải pháp toàn diện cho vấn đề này là Docker.
+-	Đóng gói bằng Docker: Docker cho phép “đóng gói” toàn bộ mã nguồn, cấu hình hệ điều hành, trình điều khiển và các thư viện cần thiết vào những “bình chứa” (Containers) độc lập. Container của AI Worker sẽ chứa môi trường PyTorch, trong khi Container của Frontend chỉ chứa môi trường Node.js. Nhờ đó, ứng dụng được đảm bảo sẽ chạy giống hệt nhau trên bất kỳ máy chủ nào.
+-	Điều phối với Docker Compose: Để các container rời rạc này có thể hoạt động như một cỗ máy thống nhất, Docker Compose được sử dụng làm công cụ điều phối. Thông qua một tệp cấu hình duy nhất (docker-compose.yml), hệ thống có thể:
++	Khởi chạy đồng loạt toàn bộ các dịch vụ (Database, Backend, Frontend) theo đúng thứ tự (ví dụ: Database phải chạy xong trước thì Backend mới được phép khởi động).
++	Thiết lập một mạng cục bộ ảo để các dịch vụ giao tiếp nội bộ an toàn mà không cần phơi bày tất cả các cổng ra Internet.
++	Gắn kết các phân vùng lưu trữ vĩnh viễn cho PostgreSQL, đảm bảo dữ liệu giao thông không bị mất đi khi máy chủ khởi động lại.
+1.4.6. Tổng kết luồng vận hành của hệ thống
+Sự kết hợp của các cơ sở lý thuyết và công nghệ trên tạo ra một luồng vận hành khép kín, hoạt động như sau:
+-	Thu thập: Camera đường phố đẩy luồng video vào hệ thống.
+-	Phân tích: AI Worker (OpenCV + YOLOv8 + ByteTrack) liên tục đọc khung hình, nhận diện, gán ID và đếm số lượng phương tiện. Kết quả thô lập tức được đẩy qua Backend để lưu vào PostgreSQL.
+-	Dự báo: Theo các chu kỳ định sẵn (ví dụ: mỗi 5 phút), dữ liệu lịch sử được lấy ra từ cơ sở dữ liệu để nạp vào mô hình LSTM. LSTM xuất ra dự đoán lưu lượng cho 10-15 phút tiếp theo.
+-	Tổng hợp thông minh: Khi người dùng gửi truy vấn hoặc hệ thống chạm ngưỡng cảnh báo, LangGraph điều phối mô hình ngôn ngữ lớn (Gemini) đọc cả dữ liệu hiện tại lẫn dữ liệu dự báo để soạn thảo ra các đánh giá ngôn ngữ tự nhiên.
+-	Tương tác: Mọi số liệu, biểu đồ thời gian thực và cảnh báo từ AI Agent được chuyển phát ngay lập tức lên bảng điều khiển React qua WebSockets, hỗ trợ con người ra quyết định tức thời.
