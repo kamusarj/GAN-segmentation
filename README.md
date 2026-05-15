@@ -37,7 +37,7 @@ GAN-segmentation/
 │   │   └── AuthContext.jsx     # Quản lý trạng thái đăng nhập
 │   ├── Dockerfile
 │   └── package.json
-├── models/                     # Thư mục chứa model weights (không push)
+├── models/                     # Thư mục chứa model weights
 ├── segGAN.ipynb                # Notebook huấn luyện GAN gốc
 ├── segGAN_improved.py          # Script huấn luyện cải tiến (SSH-friendly)
 ├── preprocess.ipynb            # Notebook tiền xử lý LoveDA
